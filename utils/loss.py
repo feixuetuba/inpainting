@@ -9,7 +9,7 @@
 
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision import models
 
@@ -306,3 +306,30 @@ class VGG16PartialLoss(PerceptualLoss):
 
         tot = l1_loss + vgg_loss + style_loss + smooth_loss
         return tot, vgg_loss, style_loss
+
+
+class SNDisLoss(torch.nn.Module):
+    """
+    The loss for sngan discriminator
+    """
+    def __init__(self, weight=1):
+        super(SNDisLoss, self).__init__()
+        self.weight = weight
+
+    def forward(self, pos, neg):
+        #return self.weight * (torch.sum(F.relu(-1+pos)) + torch.sum(F.relu(-1-neg)))/pos.size(0)
+        return self.weight * (torch.mean(F.relu_(1.-pos)) + torch.mean(F.relu_(1.+neg)))
+
+
+class SNGenLoss(torch.nn.Module):
+    """
+    The loss for sngan generator
+    """
+    def __init__(self, weight=1):
+        super(SNGenLoss, self).__init__()
+        self.weight = weight
+
+    def forward(self, neg):
+        return - self.weight * torch.mean(neg)
+
+

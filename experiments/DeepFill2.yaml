@@ -1,0 +1,60 @@
+name: DeepFill2
+stage: train
+input_nc: 3
+output_nc: 3
+epochs: 205
+n_epochs_decay: 100
+batch_same_mask: True
+input_size: 256
+
+solver:
+  name: BasicSolver
+  save_epoch: 5
+
+model:
+  name: DeepFillNetV2Model
+  lr: 0.0001
+  gpu_ids: "0"
+  learning_rate: 0.0002
+  lambda_L1: 1
+  gan: 'sngan'
+  gan_loss_alpha: 1
+  gan_with_mask: True
+  discounted_mask: True
+  random_seed: False
+  beta1: 0.5
+  beta2: 0,999
+  lr_policy: 'linear'
+
+nn:
+  name: DeepFillNet
+  nf: 64
+  norm: 'instance'
+  gpu_ids: 0
+  G:
+    name: InpaintSNNet
+    in_chanels: 5
+    out_chanels: 3
+    basic_num: 48
+  D:
+    name: SnPatchGanDirciminator
+    in_chanels: 5
+    basic_num: 48
+
+dataset:
+  name: 'FolderDataset'
+  random_crop: False
+  dataroot: ""
+  crop_size: 256
+  train:
+    filelist: ""
+    max_dataset_size: 500000
+    max_delta_height: 32
+    max_delta_width: 32
+    batch_size: 4
+    drop_last: True
+    n_workers: 4
+    flip: True
+    shuffle: True
+    vertical_margin: 0
+    horizontal_margin: 0

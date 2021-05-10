@@ -1,4 +1,6 @@
 import os
+from math import ceil
+
 import numpy as np
 
 
@@ -14,16 +16,6 @@ def get_cls(pkg, name):
     pkg = importlib.import_module(f"{pkg}.{name}")
     return getattr(pkg, name)
 
-def tensor2img(tensor, n):
-    np_tensor = tensor[:n, ...].detach().cpu().numpy()
-    np_tensor = np.transpose(np_tensor, (0,2,3,1))
-    n = np_tensor.shape[0]
-    if n > 1:
-        img = np.vstack([_] for _ in np_tensor)
-    else:
-        img = np_tensor[0]
-    return np.clip(img*255, 0, 255).astype(np.uint8)
-
 def show_remain(t):
     value = []
     t = int(t)
@@ -35,3 +27,9 @@ def show_remain(t):
     for d, v in zip(['D', 'H', 'M', 'S'], value):
         desc.append(f"{v}{d}")
     return ",".join(desc)
+
+
+def get_pad(in_,  ksize, stride, atrous=1):
+    out_ = ceil(float(in_)/stride)
+    return int(((out_ - 1) * stride + atrous*(ksize-1) + 1 - in_)/2)
+
