@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import torch
+from torch import autograd
 
 from models import get_scheduler
 from models.NN.DeepFill2.DeepFillNet import InpaintSNNet
@@ -39,8 +40,9 @@ class DeepFillNetV2Model():
             D_cfg = cfg.copy()
             D_cfg.update(cfg['nn'])
             D_cfg.update(cfg['nn']['D'])
+            self.gan_with_mask = m_cfg.get('gan_with_mask', False)
             self.netD = SnPatchGanDirciminator(
-                in_channels = D_cfg.get('in_chanels', 5),
+                in_channels = D_cfg.get('in_chanels', 7),
                 basic_num = D_cfg.get('basic_num', 48)
             )
             self.netD.to(self.device)
@@ -81,25 +83,31 @@ class DeepFillNetV2Model():
         self.optimizer_G.zero_grad()        # set G's gradients to zero
         self.optimizer_D.zero_grad()     # set D's gradients to zero
 
-        pos_imgs = torch.cat([self.images, self.masks, torch.full_like(self.masks, 1.)], dim=1)
-        neg_imgs = torch.cat([self.complete_imgs, self.masks, torch.full_like(self.masks, 1.)], dim=1)
-        pos_neg_imgs = torch.cat([pos_imgs, neg_imgs], dim=0)
+        pos = self.images
+        neg = self.complete_imgs
+        if self.gan_with_mask:
+            pos = torch.cat([pos, self.masks], dim=1)
+            neg = torch.cat([neg, self.masks], dim=1)
+        pos_neg_imgs = torch.cat([pos, neg], dim=0)
 
         pred_pos_neg = self.netD(pos_neg_imgs)
         pred_pos, pred_neg = torch.chunk(pred_pos_neg, 2, dim=0)
         d_loss = self.criterionDis(pred_pos, pred_neg)
         d_loss.backward(retain_graph=True)
+        d_penalty = self.calc_gradient_penalty(
+            self.netD, pos, neg.detach()) * self.cfg.get('wgan_gp_lambda', 1.0)
+        d_loss += d_penalty
         self.optimizer_D.step()
 
         # optim G
         self.optimizer_D.zero_grad()
         self.optimizer_G.zero_grad()
 
-        pred_neg = self.netD(neg_imgs)
+        pred_neg = self.netD(neg.detach())
         # pred_pos, pred_neg = torch.chunk(pred_pos_neg,  2, dim=0)
         g_loss = self.criterionGen(pred_neg) * self.cfg.get('lambda_construct', 1.0)
-        r_loss = self.l1(self.complete_imgs, self.images)
-        r_loss += self.l1(self.recon_imgs, self.images)
+        r_loss = self.l1(self.images, self.recon_imgs)
+        r_loss += self.l1(self.images, self.coarse) # tf.reduce_mean(tf.abs(batch_pos - x1)) ?
         r_loss *= self.cfg.get('lambda_construct', 1.0)
 
         total_loss = g_loss + r_loss
@@ -111,6 +119,26 @@ class DeepFillNetV2Model():
             'loss-g': g_loss.item(),
             'loss-r': r_loss.item()
         }
+
+    def calc_gradient_penalty(self, netD, real_data, fake_data):
+        batch_size = real_data.size(0)
+        alpha = torch.rand(batch_size, 1, 1, 1)
+        alpha = alpha.expand_as(real_data).to(self.device)
+        interpolates = alpha * real_data + (1 - alpha) * fake_data
+        interpolates = interpolates.requires_grad_().clone()
+
+        disc_interpolates = netD(interpolates)
+        grad_outputs = torch.ones(disc_interpolates.size()).to(self.device)
+
+        gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
+                                  grad_outputs=grad_outputs, create_graph=True,
+                                  retain_graph=True, only_inputs=True)[0]
+
+        gradients = gradients.view(batch_size, -1)
+        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+
+        return gradient_penalty
+
 
     def save(self, save_dir, name, iter):
         for model, net_name in zip([self.netG, self.netD], ['G', 'D']):
@@ -136,9 +164,9 @@ class DeepFillNetV2Model():
             model.load_state_dict(x)
 
     def get_current_visual(self, n):
-        real_A = tensor2img(self.real_A, n)
-        real_B = tensor2img(self.real_B, n)
-        fake_B = tensor2img(self.fake_B, n)
+        real_A = tensor2img(self.incomplete, n)
+        real_B = tensor2img(self.complete_imgs, n)
+        fake_B = tensor2img(self.images, n)
         return np.hstack([real_A, real_B, fake_B])
 
     def get_current_error(self):

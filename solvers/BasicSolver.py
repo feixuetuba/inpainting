@@ -74,7 +74,7 @@ class BasicSolver:
             logging.info(f"[{epoch}], {old_lr} -> {old_lr}, elapse:{elapse}, remain:{show_remain(remain)}")
             epoch += 1
             if epoch % self.cfg['solver']['save_epoch'] == 0:
-                model.save(self.cfg['checkpoint_dir'], 'p2p', epoch)
+                model.save(self.cfg['checkpoint_dir'], self.cfg['nn']['name'], epoch)
         logging.info("===== finished... =====")
 
     def test(self):

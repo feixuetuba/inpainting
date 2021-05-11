@@ -17,6 +17,7 @@ model:
   gpu_ids: "0"
   learning_rate: 0.0002
   lambda_L1: 1
+  lambda_gp: 10
   gan: 'sngan'
   gan_loss_alpha: 1
   gan_with_mask: True
@@ -38,7 +39,7 @@ nn:
     basic_num: 48
   D:
     name: SnPatchGanDirciminator
-    in_chanels: 5
+    in_chanels: 4
     basic_num: 48
 
 dataset:
@@ -51,7 +52,7 @@ dataset:
     max_dataset_size: 500000
     max_delta_height: 32
     max_delta_width: 32
-    batch_size: 4
+    batch_size: 8
     drop_last: True
     n_workers: 4
     flip: True

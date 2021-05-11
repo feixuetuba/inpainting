@@ -38,7 +38,7 @@ class GatedConv2dWithActivation(torch.nn.Module):
     Output:\phi(f(I))*\sigmoid(g(I))
     """
 
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True,batch_norm=True, activation=torch.nn.LeakyReLU(0.2, inplace=True)):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True,batch_norm=False, activation=torch.nn.LeakyReLU(0.2, inplace=True)):
         super(GatedConv2dWithActivation, self).__init__()
         self.batch_norm = batch_norm
         self.activation = activation

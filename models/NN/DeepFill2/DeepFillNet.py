@@ -110,6 +110,5 @@ class InpaintSNNet(torch.nn.Module):
         #print(x.size(), attention.size())
         x = torch.cat([x1, x], dim=1)
         x = self.refine_upsample_net(x)
-        x = torch.clamp(x, -1., 1.)
         return coarse_x, x, offset_flow
 

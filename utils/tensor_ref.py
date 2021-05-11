@@ -1,3 +1,4 @@
+import cv2
 import torch
 import numpy as np
 
@@ -28,12 +29,13 @@ def reduce_sum(x, axis=None, keepdim=False):
 def tensor2img(tensor, n):
     np_tensor = tensor[:n, ...].detach().cpu().numpy()
     np_tensor = np.transpose(np_tensor, (0,2,3,1))
-    n = np_tensor.shape[0]
-    if n > 1:
-        img = np.vstack([_] for _ in np_tensor)
-    else:
-        img = np_tensor[0]
-    return np.clip(img*255, 0, 255).astype(np.uint8)
+    np_tensor = (np_tensor + 1) * 127.5
+    np_tensor = np.clip(np_tensor, 0, 255).astype(np.uint8)
+    imgs = []
+    for _ in np_tensor:
+        imgs.append(cv2.cvtColor(_, cv2.COLOR_BGR2RGB))
+    img = np.vstack(imgs)
+    return img
 
 
 def same_padding(images, ksizes, strides, rates):
