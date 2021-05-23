@@ -11,11 +11,13 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("cfg", help="configuration file")
     parser.add_argument("--stage", default="test")
-    parser.add_argument("--which_epoch", type=int, default=0)
+    parser.add_argument("--which_epoch", type=int, default=-1)
     parser.add_argument("--checkpoints", default=None, help="checkpoints dir")
     parser.add_argument("--imgs", default=None, help="img dir for test")
     parser.add_argument("--dest", default="test_results", help="dest dir to save results")
     opts = parser.parse_args()
+
+    os.environ['TORCH_HOME'] = r'D:\model_zoo'
 
     with open(opts.cfg, "r") as fd:
         config = yaml.load(fd, yaml.FullLoader)

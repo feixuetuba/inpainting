@@ -8,7 +8,9 @@ from torch import autograd
 from models import get_scheduler
 from models.NN.DeepFill2.DeepFillNet import InpaintSNNet
 from models.NN.DeepFill2.SNPatchGan import SnPatchGanDirciminator
+from utils.PerceptualLoss import PerceptualLoss
 from utils.loss import SNDisLoss, SNGenLoss
+from utils.modelUtils import weights_init
 from utils.tensor_ref import tensor2img
 
 
@@ -35,6 +37,7 @@ class DeepFillNetV2Model():
             basic_num = G_cfg.get('basic_num', 48)
         )
         self.netG.to(self.device)
+        weights_init(self.netG, cfg['init_type'])
 
         if self.isTrain:
             D_cfg = cfg.copy()
@@ -51,6 +54,7 @@ class DeepFillNetV2Model():
             self.criterionDis = SNDisLoss().to(self.device)
             self.criterionGen = SNGenLoss().to(self.device)
             self.criterionL1 = torch.nn.L1Loss().to(self.device)
+            self.perceptualLoss = PerceptualLoss(torch.nn.MSELoss(), ['conv2_1', 'conv3_1', 'conv4_1']).to(self.device)
 
             beta1 = m_cfg['beta1']
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
@@ -88,7 +92,7 @@ class DeepFillNetV2Model():
         if self.gan_with_mask:
             pos = torch.cat([pos, self.masks], dim=1)
             neg = torch.cat([neg, self.masks], dim=1)
-        pos_neg_imgs = torch.cat([pos, neg], dim=0)
+        pos_neg_imgs = torch.cat([pos, neg.detach()], dim=0)
 
         pred_pos_neg = self.netD(pos_neg_imgs)
         pred_pos, pred_neg = torch.chunk(pred_pos_neg, 2, dim=0)
@@ -103,21 +107,23 @@ class DeepFillNetV2Model():
         self.optimizer_D.zero_grad()
         self.optimizer_G.zero_grad()
 
-        pred_neg = self.netD(neg.detach())
+        pred_neg = self.netD(neg)
         # pred_pos, pred_neg = torch.chunk(pred_pos_neg,  2, dim=0)
         g_loss = self.criterionGen(pred_neg) * self.cfg.get('lambda_construct', 1.0)
         r_loss = self.l1(self.images, self.recon_imgs)
         r_loss += self.l1(self.images, self.coarse) # tf.reduce_mean(tf.abs(batch_pos - x1)) ?
         r_loss *= self.cfg.get('lambda_construct', 1.0)
 
-        total_loss = g_loss + r_loss
+        vgg_loss = self.perceptualLoss(neg[:,:3,...], pos[:,:3,...])
+        total_loss = g_loss + r_loss + vgg_loss
         total_loss.backward()
         self.optimizer_G.step()
 
         self.current_loss = {
             'loss-d': d_loss.item(),
             'loss-g': g_loss.item(),
-            'loss-r': r_loss.item()
+            'loss-r': r_loss.item(),
+            'vgg': vgg_loss.item()
         }
 
     def calc_gradient_penalty(self, netD, real_data, fake_data):

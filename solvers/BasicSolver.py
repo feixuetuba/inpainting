@@ -50,8 +50,8 @@ class BasicSolver:
 
         writer = SummaryWriter(log_dir=log_dir)
 
-        which_epoch = self.cfg.get('which_epoch', 0)
-        if which_epoch != 0:
+        which_epoch = self.cfg.get('which_epoch', -1)
+        if which_epoch >= 0:
             model.load(self.cfg['checkpoint_dir'], self.cfg['nn']['name'], which_epoch)
         step = 0
         logging.info("===== Training... =====")

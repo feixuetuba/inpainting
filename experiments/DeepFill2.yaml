@@ -16,8 +16,8 @@ model:
   lr: 0.0001
   gpu_ids: "0"
   learning_rate: 0.0002
-  lambda_L1: 1
-  lambda_gp: 10
+  lambda_L1: 100
+  lambda_gp: 0.1
   gan: 'sngan'
   gan_loss_alpha: 1
   gan_with_mask: True
@@ -26,6 +26,7 @@ model:
   beta1: 0.5
   beta2: 0,999
   lr_policy: 'linear'
+  init_type: 'xavier'
 
 nn:
   name: DeepFillNet
@@ -34,7 +35,7 @@ nn:
   gpu_ids: 0
   G:
     name: InpaintSNNet
-    in_chanels: 5
+    in_chanels: 4
     out_chanels: 3
     basic_num: 48
   D:
@@ -45,10 +46,10 @@ nn:
 dataset:
   name: 'FolderDataset'
   random_crop: False
-  dataroot: ""
+  dataroot: "D:\\datasets\\myScrap\\images\\lofter\\images"
   crop_size: 256
   train:
-    filelist: ""
+    filelist: "D:\\datasets\\myScrap\\images\\lofter\\images\\list_file"
     max_dataset_size: 500000
     max_delta_height: 32
     max_delta_width: 32

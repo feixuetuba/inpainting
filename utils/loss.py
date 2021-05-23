@@ -318,7 +318,7 @@ class SNDisLoss(torch.nn.Module):
 
     def forward(self, pos, neg):
         #return self.weight * (torch.sum(F.relu(-1+pos)) + torch.sum(F.relu(-1-neg)))/pos.size(0)
-        return self.weight * (torch.mean(F.relu_(1.-pos)) + torch.mean(F.relu_(1.+neg))) * 0.5
+        return self.weight * (torch.mean(F.relu_(pos-1.)) + torch.mean(F.relu_(-1.-neg))) * 0.5
 
 
 class SNGenLoss(torch.nn.Module):
@@ -330,6 +330,6 @@ class SNGenLoss(torch.nn.Module):
         self.weight = weight
 
     def forward(self, neg):
-        return - self.weight * torch.mean(neg)
+        return -self.weight * torch.mean(neg)
 
 

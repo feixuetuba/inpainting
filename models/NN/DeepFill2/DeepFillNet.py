@@ -94,7 +94,7 @@ class InpaintSNNet(torch.nn.Module):
         # Coarse  1 represents masked point
         # masked_imgs =  imgs * (1 - masks) #+ masks
         if edges == None:
-            input_imgs = torch.cat([masked_imgs, torch.full_like(masks, 1.), masks], dim=1)
+            input_imgs = torch.cat([masked_imgs, masks], dim=1)
         else:
             edges = edges * masks
             input_imgs = torch.cat([masked_imgs, edges, torch.full_like(masks, 1.), masks], dim=1)
